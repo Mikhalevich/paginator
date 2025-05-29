@@ -2,26 +2,29 @@ package main
 
 import (
 	"log"
-	"os"
 
 	"github.com/Mikhalevich/paginator"
 )
 
 const (
-	dataLen  = 1024
+	dataLen  = 101
 	pageSize = 10
 )
 
 func main() {
-	p := paginator.New(NewData(), pageSize)
+	var (
+		pagin = paginator.New(NewData(), pageSize)
+		page  = &paginator.Page[int]{
+			PageCount: pageSize,
+		}
+	)
 
-	page, err := p.Page(1)
-	if err != nil {
-		log.Printf("first page error: %v", err)
-		os.Exit(1)
+	for page.HasNext() {
+		page, _ = pagin.Page(page.Next())
+
+		log.Printf("page number: %d total pages: %d page data: %v",
+			page.PageNumber, page.PageCount, page.Data)
 	}
-
-	log.Println(page.Data)
 }
 
 type TestData struct {
@@ -41,7 +44,13 @@ func NewData() *TestData {
 }
 
 func (t *TestData) Query(offset int, limit int) ([]int, error) {
-	return t.Data[offset : offset+limit], nil
+	limit = offset + limit
+
+	if limit > len(t.Data) {
+		limit = len(t.Data)
+	}
+
+	return t.Data[offset:limit], nil
 }
 
 func (t *TestData) Count() (int, error) {
