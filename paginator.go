@@ -22,6 +22,10 @@ func New[T any](queryer Queryer[T], pageSize int) *Paginator[T] {
 }
 
 func (p *Paginator[T]) Page(page int) (*Page[T], error) {
+	if page <= 0 {
+		return nil, fmt.Errorf("invaid page number: %d", page)
+	}
+
 	count, err := p.queryer.Count()
 	if err != nil {
 		return nil, fmt.Errorf("query count: %w", err)
@@ -36,7 +40,7 @@ func (p *Paginator[T]) Page(page int) (*Page[T], error) {
 		pageTotalCount = p.calculatePageCount(count)
 	)
 
-	if offset > count {
+	if page > pageTotalCount {
 		return nil, fmt.Errorf("invalid page: %d total pages: %d", page, pageTotalCount)
 	}
 
