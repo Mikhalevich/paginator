@@ -15,15 +15,15 @@ func main() {
 	var (
 		pagin = paginator.New(NewData(), pageSize)
 		page  = &paginator.Page[int]{
-			PageCount: pageSize,
+			PageTotalCount: pageSize,
 		}
 	)
 
 	for page.HasNext() {
 		page, _ = pagin.Page(page.Next())
 
-		log.Printf("page number: %d total pages: %d page data: %v",
-			page.PageNumber, page.PageCount, page.Data)
+		log.Printf("bottom index: %d top index: %d, page number: %d total pages: %d page data: %v",
+			page.BottomIndex, page.TopIndex, page.PageNumber, page.PageTotalCount, page.Data)
 	}
 }
 

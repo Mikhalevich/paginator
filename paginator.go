@@ -32,12 +32,12 @@ func (p *Paginator[T]) Page(page int) (*Page[T], error) {
 	}
 
 	var (
-		offset    = p.pageSize * (page - 1)
-		pageCount = p.calculatePageCount(count)
+		offset         = p.pageSize * (page - 1)
+		pageTotalCount = p.calculatePageCount(count)
 	)
 
 	if offset > count {
-		return nil, fmt.Errorf("invalid page: %d total pages: %d", page, pageCount)
+		return nil, fmt.Errorf("invalid page: %d total pages: %d", page, pageTotalCount)
 	}
 
 	data, err := p.queryer.Query(offset, p.pageSize)
@@ -45,13 +45,18 @@ func (p *Paginator[T]) Page(page int) (*Page[T], error) {
 		return nil, fmt.Errorf("query data: %w", err)
 	}
 
+	var (
+		bottomIndex = offset + 1
+		topIndex    = bottomIndex + len(data) - 1
+	)
+
 	return &Page[T]{
-		Data:       data,
-		Count:      count,
-		Offset:     offset,
-		PageSize:   p.pageSize,
-		PageNumber: page,
-		PageCount:  pageCount,
+		Data:           data,
+		BottomIndex:    bottomIndex,
+		TopIndex:       topIndex,
+		PageSize:       p.pageSize,
+		PageNumber:     page,
+		PageTotalCount: pageTotalCount,
 	}, nil
 }
 
