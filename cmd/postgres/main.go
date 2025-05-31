@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"github.com/Mikhalevich/paginator"
@@ -15,13 +16,14 @@ func main() {
 	var (
 		pagin = paginator.New(NewSliceProvider(), pageSize)
 		page  *paginator.Page[int]
+		ctx   = context.Background()
 	)
 
-	page, _ = pagin.Page(1)
+	page, _ = pagin.Page(ctx, 1)
 	printPage(page)
 
 	for page.HasNext() {
-		page, _ = pagin.Page(page.Next())
+		page, _ = pagin.Page(ctx, page.Next())
 
 		printPage(page)
 	}

@@ -1,5 +1,7 @@
 package paginator
 
+import "context"
+
 type SliceQueryProvider[T any] struct {
 	Data []T
 }
@@ -10,7 +12,7 @@ func NewSliceQueryProvider[T any](s []T) *SliceQueryProvider[T] {
 	}
 }
 
-func (s *SliceQueryProvider[T]) Query(offset int, limit int) ([]T, error) {
+func (s *SliceQueryProvider[T]) Query(ctx context.Context, offset int, limit int) ([]T, error) {
 	limit = offset + limit
 
 	if limit > len(s.Data) {
@@ -20,6 +22,6 @@ func (s *SliceQueryProvider[T]) Query(offset int, limit int) ([]T, error) {
 	return s.Data[offset:limit], nil
 }
 
-func (s *SliceQueryProvider[T]) Count() (int, error) {
+func (s *SliceQueryProvider[T]) Count(ctx context.Context) (int, error) {
 	return len(s.Data), nil
 }
