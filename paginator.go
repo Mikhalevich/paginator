@@ -1,12 +1,13 @@
 package paginator
 
 import (
+	"context"
 	"fmt"
 )
 
 type Queryer[T any] interface {
-	Query(offset int, limit int) ([]T, error)
-	Count() (int, error)
+	Query(ctx context.Context, offset int, limit int) ([]T, error)
+	Count(ctx context.Context) (int, error)
 }
 
 type Paginator[T any] struct {
@@ -21,12 +22,12 @@ func New[T any](queryer Queryer[T], pageSize int) *Paginator[T] {
 	}
 }
 
-func (p *Paginator[T]) Page(page int) (*Page[T], error) {
+func (p *Paginator[T]) Page(ctx context.Context, page int) (*Page[T], error) {
 	if page <= 0 {
 		return nil, fmt.Errorf("invaid page number: %d", page)
 	}
 
-	count, err := p.queryer.Count()
+	count, err := p.queryer.Count(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("query count: %w", err)
 	}
@@ -44,7 +45,7 @@ func (p *Paginator[T]) Page(page int) (*Page[T], error) {
 		return nil, fmt.Errorf("invalid page: %d total pages: %d", page, pageTotalCount)
 	}
 
-	data, err := p.queryer.Query(offset, p.pageSize)
+	data, err := p.queryer.Query(ctx, offset, p.pageSize)
 	if err != nil {
 		return nil, fmt.Errorf("query data: %w", err)
 	}
