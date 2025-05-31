@@ -6,7 +6,7 @@ BIN_PATH ?= $(ROOT)/bin
 LINTER_NAME := golangci-lint
 LINTER_VERSION := v2.1.2
 
-.PHONY: all build test install-linter lint tools tools-update
+.PHONY: all build test install-linter lint tools tools-update generate
 
 all: build
 
@@ -29,11 +29,8 @@ lint: install-linter
 fmt: install-linter
 	$(GOBIN)/$(LINTER_VERSION)/$(LINTER_NAME) fmt --config .golangci.yml
 
-tools: install-linter
-	@if [ ! -f $(GOBIN)/mockgen ]; then\
-		echo "Installing mockgen";\
-		GOBIN=$(GOBIN) go install go.uber.org/mock/mockgen@v0.5.0;\
-	fi
-
 tools-update:
 	go get tool
+
+generate:
+	$(ENV_PATH) go generate ./...
