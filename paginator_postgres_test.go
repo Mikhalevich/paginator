@@ -3,8 +3,9 @@ package paginator_test
 import (
 	"testing"
 
-	"github.com/Mikhalevich/paginator"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/Mikhalevich/paginator"
 )
 
 const (

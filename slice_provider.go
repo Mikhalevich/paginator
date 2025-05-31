@@ -1,6 +1,8 @@
 package paginator
 
-import "context"
+import (
+	"context"
+)
 
 type SliceQueryProvider[T any] struct {
 	Data []T
