@@ -3,6 +3,8 @@ package paginator
 import (
 	"context"
 	"fmt"
+
+	"github.com/Mikhalevich/paginator/internal/queryercache"
 )
 
 type Queryer[T any] interface {
@@ -15,7 +17,17 @@ type Paginator[T any] struct {
 	pageSize int
 }
 
-func New[T any](queryer Queryer[T], pageSize int) *Paginator[T] {
+func New[T any](queryer Queryer[T], pageSize int, opts ...Option) *Paginator[T] {
+	var defaultOptions options
+
+	for _, o := range opts {
+		o(&defaultOptions)
+	}
+
+	if defaultOptions.IsQueryCountCachable {
+		queryer = queryercache.New(queryer, defaultOptions.QueryCountCacheTTL)
+	}
+
 	return &Paginator[T]{
 		queryer:  queryer,
 		pageSize: pageSize,
