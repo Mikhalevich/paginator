@@ -3,6 +3,7 @@ package paginator_test
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
@@ -20,7 +21,10 @@ func initSlicePaginator(dataLen, pageSize int) *paginator.Paginator[int] {
 	return paginator.New(paginator.NewSliceQueryProvider(data), pageSize)
 }
 
-func initMockPaginator(t *testing.T) (*paginator.Paginator[int], *paginator.MockQueryer[int]) {
+func initMockPaginator(
+	t *testing.T,
+	opts ...paginator.Option,
+) (*paginator.Paginator[int], *paginator.MockQueryer[int]) {
 	t.Helper()
 
 	var (
@@ -28,7 +32,7 @@ func initMockPaginator(t *testing.T) (*paginator.Paginator[int], *paginator.Mock
 		mockQueryer = paginator.NewMockQueryer[int](ctrl)
 	)
 
-	return paginator.New(mockQueryer, pageSize), mockQueryer
+	return paginator.New(mockQueryer, pageSize, opts...), mockQueryer
 }
 
 func TestFirstPage(t *testing.T) {
@@ -165,4 +169,35 @@ func TestQueryError(t *testing.T) {
 
 	require.EqualError(t, err, "query data: some query error")
 	require.Nil(t, page)
+}
+
+func TestQueryCacheCount(t *testing.T) {
+	t.Parallel()
+
+	var (
+		pag, mockQueryer = initMockPaginator(t, paginator.WithQueryCountCache(time.Minute))
+		ctx              = t.Context()
+	)
+
+	gomock.InOrder(
+		mockQueryer.EXPECT().Count(ctx).Return(3, nil),
+		mockQueryer.EXPECT().Query(ctx, 0, pageSize).Return([]int{1, 2, 3}, nil),
+		mockQueryer.EXPECT().Query(ctx, 0, pageSize).Return([]int{1, 2, 3}, nil),
+	)
+
+	testFlow := func() {
+		page, err := pag.Page(ctx, 1)
+
+		require.NoError(t, err)
+
+		require.ElementsMatch(t, []int{1, 2, 3}, page.Data)
+		require.Equal(t, 1, page.BottomIndex)
+		require.Equal(t, 3, page.TopIndex)
+		require.Equal(t, 10, page.PageSize)
+		require.Equal(t, 1, page.PageNumber)
+		require.Equal(t, 1, page.PageTotalCount)
+	}
+
+	testFlow()
+	testFlow()
 }
