@@ -12,6 +12,12 @@ import (
 	"github.com/Mikhalevich/paginator/queryercache"
 )
 
+const (
+	sqlRows  = 101
+	dataLen  = 101
+	pageSize = 10
+)
+
 //nolint:unparam
 func initSlicePaginator(dataLen, pageSize int) *paginator.Paginator[int] {
 	data := make([]int, 0, dataLen)
