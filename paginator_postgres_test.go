@@ -131,6 +131,12 @@ func createDB(sql *sql.DB) error {
 		return fmt.Errorf("create test table: %w", err)
 	}
 
+	if _, err := sql.Exec(`
+		CREATE INDEX test_int_field_idx ON test(int_field)`,
+	); err != nil {
+		return fmt.Errorf("create index: %w", err)
+	}
+
 	return nil
 }
 
