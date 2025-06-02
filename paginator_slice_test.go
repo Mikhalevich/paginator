@@ -9,6 +9,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/Mikhalevich/paginator"
+	"github.com/Mikhalevich/paginator/queryercache"
 )
 
 //nolint:unparam
@@ -23,7 +24,6 @@ func initSlicePaginator(dataLen, pageSize int) *paginator.Paginator[int] {
 
 func initMockPaginator(
 	t *testing.T,
-	opts ...paginator.Option,
 ) (*paginator.Paginator[int], *paginator.MockQueryer[int]) {
 	t.Helper()
 
@@ -32,7 +32,21 @@ func initMockPaginator(
 		mockQueryer = paginator.NewMockQueryer[int](ctrl)
 	)
 
-	return paginator.New(mockQueryer, pageSize, opts...), mockQueryer
+	return paginator.New(mockQueryer, pageSize), mockQueryer
+}
+
+func initMockCachedPaginator(
+	t *testing.T,
+	cacheOpts ...queryercache.Option,
+) (*paginator.Paginator[int], *paginator.MockQueryer[int]) {
+	t.Helper()
+
+	var (
+		ctrl        = gomock.NewController(t)
+		mockQueryer = paginator.NewMockQueryer[int](ctrl)
+	)
+
+	return paginator.New(queryercache.New(mockQueryer, cacheOpts...), pageSize), mockQueryer
 }
 
 func TestFirstPage(t *testing.T) {
@@ -175,7 +189,7 @@ func TestQueryCacheCount(t *testing.T) {
 	t.Parallel()
 
 	var (
-		pag, mockQueryer = initMockPaginator(t, paginator.WithQueryCountCache(time.Minute))
+		pag, mockQueryer = initMockCachedPaginator(t, queryercache.WithCountTTL(time.Minute))
 		ctx              = t.Context()
 	)
 

@@ -4,22 +4,33 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/Mikhalevich/paginator"
 )
 
-type Queryer[T any] interface {
-	Query(ctx context.Context, offset int, limit int) ([]T, error)
-	Count(ctx context.Context) (int, error)
-}
+const (
+	defaultCountCacheTTL = time.Second * 15
+)
 
 type QueryerCache[T any] struct {
-	queryer Queryer[T]
+	queryer paginator.Queryer[T]
 	count   value[int]
 }
 
-func New[T any](queryer Queryer[T], countTTL time.Duration) *QueryerCache[T] {
+func New[T any](queryer paginator.Queryer[T], opts ...Option) *QueryerCache[T] {
+	defaultOptions := options{
+		CountTTL: defaultCountCacheTTL,
+	}
+
+	for _, o := range opts {
+		o(&defaultOptions)
+	}
+
+	count := newValue[int](defaultOptions.CountTTL)
+
 	return &QueryerCache[T]{
 		queryer: queryer,
-		count:   newValue[int](countTTL),
+		count:   count,
 	}
 }
 
