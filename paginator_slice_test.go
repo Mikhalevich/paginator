@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	sqlRows  = 101
-	dataLen  = 101
-	pageSize = 10
+	sqlTestRows      = 101
+	sqlBenchmartRows = 10001
+	dataLen          = 101
+	pageSize         = 10
 )
 
 //nolint:unparam

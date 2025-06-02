@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/rand/v2"
 	"testing"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -39,6 +40,10 @@ func (s *PaginatorPostgres) SetupSuite() {
 
 	if err := createDB(sqlDB); err != nil {
 		s.FailNow("create db", err)
+	}
+
+	if err := populateTestData(sqlDB, sqlTestRows); err != nil {
+		s.FailNow("pupulate test data", err)
 	}
 
 	s.pag = paginator.New(&SqlQueryProvider{
@@ -119,22 +124,17 @@ func connectToDatabase() (*sql.DB, func() error, error) {
 func createDB(sql *sql.DB) error {
 	if _, err := sql.Exec(`
 		CREATE TABLE test(
-			id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-			int_field INTEGER NOT NULL,
-			text_field TEXT NOT NULL
+			id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+			int_field BIGINT NOT NULL
 		)`,
 	); err != nil {
 		return fmt.Errorf("create test table: %w", err)
 	}
 
-	if err := populateTestData(sql); err != nil {
-		return fmt.Errorf("pupulate test data: %w", err)
-	}
-
 	return nil
 }
 
-func populateTestData(sql *sql.DB) error {
+func populateTestData(sql *sql.DB, rowsCount int) error {
 	trx, err := sql.Begin()
 	if err != nil {
 		return fmt.Errorf("begin: %w", err)
@@ -143,15 +143,16 @@ func populateTestData(sql *sql.DB) error {
 	//nolint:errcheck
 	defer trx.Rollback()
 
-	stmt, err := trx.Prepare(`INSERT INTO test(int_field, text_field) VALUES($1, $2)`)
+	stmt, err := trx.Prepare(`INSERT INTO test(int_field) VALUES($1)`)
 	if err != nil {
 		return fmt.Errorf("tx prepare: %w", err)
 	}
 
 	defer stmt.Close()
 
-	for i := range sqlRows {
-		if _, err := stmt.Exec(i+1, fmt.Sprintf("text_%d", i+1)); err != nil {
+	for range rowsCount {
+		//nolint:gosec
+		if _, err := stmt.Exec(rand.Int()); err != nil {
 			return fmt.Errorf("exec: %w", err)
 		}
 	}
@@ -164,9 +165,8 @@ func populateTestData(sql *sql.DB) error {
 }
 
 type TestTable struct {
-	ID         int
-	Int_Field  int
-	Text_Field string
+	ID        int
+	Int_Field int
 }
 
 type SqlQueryProvider struct {
@@ -177,10 +177,11 @@ func (s *SqlQueryProvider) Query(ctx context.Context, offset int, limit int) ([]
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT
 			id,
-			int_field,
-			text_field
+			int_field
 		FROM
 			test
+		ORDER BY
+			int_field
 		OFFSET $1
 		LIMIT $2
 	`, offset, limit)
@@ -195,7 +196,7 @@ func (s *SqlQueryProvider) Query(ctx context.Context, offset int, limit int) ([]
 
 	for rows.Next() {
 		var data TestTable
-		if err := rows.Scan(&data.ID, &data.Int_Field, &data.Text_Field); err != nil {
+		if err := rows.Scan(&data.ID, &data.Int_Field); err != nil {
 			return nil, fmt.Errorf("scan: %w", err)
 		}
 
@@ -237,61 +238,46 @@ func (s *PaginatorPostgres) TestFirstPage() {
 
 	s.Require().NoError(err)
 
-	s.Require().ElementsMatch([]TestTable{
-		{
-			ID:         1,
-			Int_Field:  1,
-			Text_Field: "text_1",
-		},
-		{
-			ID:         2,
-			Int_Field:  2,
-			Text_Field: "text_2",
-		},
-		{
-			ID:         3,
-			Int_Field:  3,
-			Text_Field: "text_3",
-		},
-		{
-			ID:         4,
-			Int_Field:  4,
-			Text_Field: "text_4",
-		},
-		{
-			ID:         5,
-			Int_Field:  5,
-			Text_Field: "text_5",
-		},
-		{
-			ID:         6,
-			Int_Field:  6,
-			Text_Field: "text_6",
-		},
-		{
-			ID:         7,
-			Int_Field:  7,
-			Text_Field: "text_7",
-		},
-		{
-			ID:         8,
-			Int_Field:  8,
-			Text_Field: "text_8",
-		},
-		{
-			ID:         9,
-			Int_Field:  9,
-			Text_Field: "text_9",
-		},
-		{
-			ID:         10,
-			Int_Field:  10,
-			Text_Field: "text_10",
-		},
-	}, page.Data)
+	s.Require().Len(page.Data, 10)
 	s.Require().Equal(1, page.BottomIndex)
 	s.Require().Equal(10, page.TopIndex)
 	s.Require().Equal(10, page.PageSize)
 	s.Require().Equal(1, page.PageNumber)
 	s.Require().Equal(11, page.PageTotalCount)
+}
+
+func BenchmarkPaginatorPostgres(b *testing.B) {
+	sqlDB, cleanup, err := connectToDatabase()
+	if err != nil {
+		b.Fatal("could not connect to database", err)
+	}
+
+	//nolint:errcheck
+	defer cleanup()
+
+	if err := createDB(sqlDB); err != nil {
+		b.Fatal("create db", err)
+	}
+
+	if err := populateTestData(sqlDB, sqlBenchmartRows); err != nil {
+		b.Fatal("pupulate test data", err)
+	}
+
+	pag := paginator.New(&SqlQueryProvider{
+		db: sqlDB,
+	}, pageSize)
+
+	page, err := pag.Page(b.Context(), 1)
+	if err != nil {
+		b.Fatal("first page", err)
+	}
+
+	pagesCount := page.PageTotalCount
+
+	for b.Loop() {
+		//nolint:gosec
+		if _, err := pag.Page(b.Context(), rand.Int()%pagesCount); err != nil {
+			b.Fatal("get page", err)
+		}
+	}
 }
