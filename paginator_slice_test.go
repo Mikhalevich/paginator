@@ -192,18 +192,91 @@ func TestQueryError(t *testing.T) {
 	require.Nil(t, page)
 }
 
-func TestQueryCacheCount(t *testing.T) {
+func TestQueryCountCache(t *testing.T) {
 	t.Parallel()
 
 	var (
-		pag, mockQueryer = initMockCachedPaginator(t, queryercache.WithCountTTL(time.Minute))
-		ctx              = t.Context()
+		pag, mockQueryer = initMockCachedPaginator(
+			t,
+			queryercache.WithCountTTL(time.Minute),
+			queryercache.WithQueryTTL(time.Minute),
+		)
+		ctx = t.Context()
+	)
+
+	gomock.InOrder(
+		mockQueryer.EXPECT().Count(ctx).Return(3, nil),
+		mockQueryer.EXPECT().Query(ctx, 0, pageSize).Return([]int{1, 2, 3}, nil),
+	)
+
+	testFlow := func() {
+		page, err := pag.Page(ctx, 1)
+
+		require.NoError(t, err)
+
+		require.ElementsMatch(t, []int{1, 2, 3}, page.Data)
+		require.Equal(t, 1, page.BottomIndex)
+		require.Equal(t, 3, page.TopIndex)
+		require.Equal(t, 10, page.PageSize)
+		require.Equal(t, 1, page.PageNumber)
+		require.Equal(t, 1, page.PageTotalCount)
+	}
+
+	testFlow()
+	testFlow()
+}
+
+func TestCountCache(t *testing.T) {
+	t.Parallel()
+
+	var (
+		pag, mockQueryer = initMockCachedPaginator(
+			t,
+			queryercache.WithCountTTL(time.Minute),
+			queryercache.WithQueryTTL(0),
+		)
+		ctx = t.Context()
 	)
 
 	gomock.InOrder(
 		mockQueryer.EXPECT().Count(ctx).Return(3, nil),
 		mockQueryer.EXPECT().Query(ctx, 0, pageSize).Return([]int{1, 2, 3}, nil),
 		mockQueryer.EXPECT().Query(ctx, 0, pageSize).Return([]int{1, 2, 3}, nil),
+	)
+
+	testFlow := func() {
+		page, err := pag.Page(ctx, 1)
+
+		require.NoError(t, err)
+
+		require.ElementsMatch(t, []int{1, 2, 3}, page.Data)
+		require.Equal(t, 1, page.BottomIndex)
+		require.Equal(t, 3, page.TopIndex)
+		require.Equal(t, 10, page.PageSize)
+		require.Equal(t, 1, page.PageNumber)
+		require.Equal(t, 1, page.PageTotalCount)
+	}
+
+	testFlow()
+	testFlow()
+}
+
+func TestQueryCache(t *testing.T) {
+	t.Parallel()
+
+	var (
+		pag, mockQueryer = initMockCachedPaginator(
+			t,
+			queryercache.WithCountTTL(0),
+			queryercache.WithQueryTTL(time.Minute),
+		)
+		ctx = t.Context()
+	)
+
+	gomock.InOrder(
+		mockQueryer.EXPECT().Count(ctx).Return(3, nil),
+		mockQueryer.EXPECT().Query(ctx, 0, pageSize).Return([]int{1, 2, 3}, nil),
+		mockQueryer.EXPECT().Count(ctx).Return(3, nil),
 	)
 
 	testFlow := func() {

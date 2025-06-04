@@ -290,7 +290,7 @@ func BenchmarkPaginatorPostgres(b *testing.B) {
 	}
 }
 
-func BenchmarkCachedPaginatorPostgres(b *testing.B) {
+func BenchmarkCountCachedPaginatorPostgres(b *testing.B) {
 	sqlDB, cleanup, err := connectToDatabase()
 	if err != nil {
 		b.Fatal("could not connect to database", err)
@@ -311,7 +311,95 @@ func BenchmarkCachedPaginatorPostgres(b *testing.B) {
 		queryercache.New(
 			&SqlQueryProvider{
 				db: sqlDB,
-			}, queryercache.WithCountTTL(time.Minute*5),
+			},
+			queryercache.WithCountTTL(time.Minute*5),
+			queryercache.WithQueryTTL(0),
+		),
+		pageSize,
+	)
+
+	page, err := pag.Page(b.Context(), 1)
+	if err != nil {
+		b.Fatal("first page", err)
+	}
+
+	pagesCount := page.PageTotalCount
+
+	for b.Loop() {
+		//nolint:gosec
+		if _, err := pag.Page(b.Context(), rand.Int()%pagesCount+1); err != nil {
+			b.Fatal("get page", err)
+		}
+	}
+}
+
+func BenchmarkQueryCachedPaginatorPostgres(b *testing.B) {
+	sqlDB, cleanup, err := connectToDatabase()
+	if err != nil {
+		b.Fatal("could not connect to database", err)
+	}
+
+	//nolint:errcheck
+	defer cleanup()
+
+	if err := createDB(sqlDB); err != nil {
+		b.Fatal("create db", err)
+	}
+
+	if err := populateTestData(sqlDB, sqlBenchmartRows); err != nil {
+		b.Fatal("pupulate test data", err)
+	}
+
+	pag := paginator.New(
+		queryercache.New(
+			&SqlQueryProvider{
+				db: sqlDB,
+			},
+			queryercache.WithCountTTL(0),
+			queryercache.WithQueryTTL(time.Minute*5),
+		),
+		pageSize,
+	)
+
+	page, err := pag.Page(b.Context(), 1)
+	if err != nil {
+		b.Fatal("first page", err)
+	}
+
+	pagesCount := page.PageTotalCount
+
+	for b.Loop() {
+		//nolint:gosec
+		if _, err := pag.Page(b.Context(), rand.Int()%pagesCount+1); err != nil {
+			b.Fatal("get page", err)
+		}
+	}
+}
+
+func BenchmarkQueryCountCachedPaginatorPostgres(b *testing.B) {
+	sqlDB, cleanup, err := connectToDatabase()
+	if err != nil {
+		b.Fatal("could not connect to database", err)
+	}
+
+	//nolint:errcheck
+	defer cleanup()
+
+	if err := createDB(sqlDB); err != nil {
+		b.Fatal("create db", err)
+	}
+
+	if err := populateTestData(sqlDB, sqlBenchmartRows); err != nil {
+		b.Fatal("pupulate test data", err)
+	}
+
+	pag := paginator.New(
+		queryercache.New(
+			&SqlQueryProvider{
+				db: sqlDB,
+			},
+			queryercache.WithCountTTL(time.Minute*5),
+			queryercache.WithQueryTTL(time.Minute*5),
 		),
 		pageSize,
 	)

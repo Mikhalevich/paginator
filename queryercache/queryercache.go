@@ -10,29 +10,39 @@ import (
 )
 
 const (
-	defaultCountCacheTTL = time.Second * 15
+	defaultCountCacheTTL = time.Second * 30
+	defaultQueryCacheTTL = time.Second * 30
 )
 
 type QueryerCache[T any] struct {
-	queryer  paginator.Queryer[T]
+	queryer paginator.Queryer[T]
+
 	count    value[int]
 	countMtx sync.RWMutex
+
+	query    keyValue[[]T]
+	queryMtx sync.RWMutex
 }
 
 func New[T any](queryer paginator.Queryer[T], opts ...Option) *QueryerCache[T] {
 	defaultOptions := options{
 		CountTTL: defaultCountCacheTTL,
+		QueryTTL: defaultQueryCacheTTL,
 	}
 
 	for _, o := range opts {
 		o(&defaultOptions)
 	}
 
-	count := newValue[int](defaultOptions.CountTTL)
+	var (
+		count = newValue[int](defaultOptions.CountTTL)
+		query = newKeyValue[[]T](defaultOptions.QueryTTL)
+	)
 
 	return &QueryerCache[T]{
 		queryer: queryer,
 		count:   count,
+		query:   query,
 	}
 }
 
@@ -71,10 +81,42 @@ func (q *QueryerCache[T]) Count(ctx context.Context) (int, error) {
 }
 
 func (q *QueryerCache[T]) Query(ctx context.Context, offset int, limit int) ([]T, error) {
+	key := makeQueryKey(offset, limit)
+
+	vals, ok := q.queryValue(key)
+	if ok {
+		return vals, nil
+	}
+
 	vals, err := q.queryer.Query(ctx, offset, limit)
 	if err != nil {
 		return nil, fmt.Errorf("query: %w", err)
 	}
 
+	q.setQueryValue(key, vals)
+
 	return vals, nil
+}
+
+func (q *QueryerCache[T]) queryValue(key string) ([]T, bool) {
+	q.queryMtx.RLock()
+	defer q.queryMtx.RUnlock()
+
+	vals, ok := q.query.Value(key)
+	if ok {
+		return vals, true
+	}
+
+	return nil, false
+}
+
+func (q *QueryerCache[T]) setQueryValue(key string, vals []T) {
+	q.queryMtx.Lock()
+	defer q.queryMtx.Unlock()
+
+	q.query.SetValue(key, vals)
+}
+
+func makeQueryKey(offset int, limit int) string {
+	return fmt.Sprintf("%d_%d", offset, limit)
 }
