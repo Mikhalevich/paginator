@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"testing"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ory/dockertest/v3"
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/Mikhalevich/paginator"
+	"github.com/Mikhalevich/paginator/queryercache"
 )
 
 type PaginatorPostgres struct {
@@ -282,7 +284,48 @@ func BenchmarkPaginatorPostgres(b *testing.B) {
 
 	for b.Loop() {
 		//nolint:gosec
-		if _, err := pag.Page(b.Context(), rand.Int()%pagesCount); err != nil {
+		if _, err := pag.Page(b.Context(), rand.Int()%pagesCount+1); err != nil {
+			b.Fatal("get page", err)
+		}
+	}
+}
+
+func BenchmarkCachedPaginatorPostgres(b *testing.B) {
+	sqlDB, cleanup, err := connectToDatabase()
+	if err != nil {
+		b.Fatal("could not connect to database", err)
+	}
+
+	//nolint:errcheck
+	defer cleanup()
+
+	if err := createDB(sqlDB); err != nil {
+		b.Fatal("create db", err)
+	}
+
+	if err := populateTestData(sqlDB, sqlBenchmartRows); err != nil {
+		b.Fatal("pupulate test data", err)
+	}
+
+	pag := paginator.New(
+		queryercache.New(
+			&SqlQueryProvider{
+				db: sqlDB,
+			}, queryercache.WithCountTTL(time.Minute*5),
+		),
+		pageSize,
+	)
+
+	page, err := pag.Page(b.Context(), 1)
+	if err != nil {
+		b.Fatal("first page", err)
+	}
+
+	pagesCount := page.PageTotalCount
+
+	for b.Loop() {
+		//nolint:gosec
+		if _, err := pag.Page(b.Context(), rand.Int()%pagesCount+1); err != nil {
 			b.Fatal("get page", err)
 		}
 	}

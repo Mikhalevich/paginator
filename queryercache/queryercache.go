@@ -3,6 +3,7 @@ package queryercache
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/Mikhalevich/paginator"
@@ -13,8 +14,9 @@ const (
 )
 
 type QueryerCache[T any] struct {
-	queryer paginator.Queryer[T]
-	count   value[int]
+	queryer  paginator.Queryer[T]
+	count    value[int]
+	countMtx sync.RWMutex
 }
 
 func New[T any](queryer paginator.Queryer[T], opts ...Option) *QueryerCache[T] {
@@ -34,8 +36,26 @@ func New[T any](queryer paginator.Queryer[T], opts ...Option) *QueryerCache[T] {
 	}
 }
 
+func (q *QueryerCache[T]) countValue(withLock bool) (int, bool) {
+	if withLock {
+		q.countMtx.RLock()
+		defer q.countMtx.RUnlock()
+	}
+
+	return q.count.Value()
+}
+
 func (q *QueryerCache[T]) Count(ctx context.Context) (int, error) {
-	val, ok := q.count.Value()
+	//nolint:varnamelen
+	val, ok := q.countValue(true)
+	if ok {
+		return val, nil
+	}
+
+	q.countMtx.Lock()
+	defer q.countMtx.Unlock()
+
+	val, ok = q.countValue(false)
 	if ok {
 		return val, nil
 	}
