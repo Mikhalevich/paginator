@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/Mikhalevich/paginator"
+	"github.com/Mikhalevich/paginator/queryerslice"
 )
 
 const (
@@ -34,12 +35,12 @@ func printPage(page *paginator.Page[int]) {
 		page.BottomIndex, page.TopIndex, page.PageNumber, page.PageTotalCount, page.Data)
 }
 
-func NewSliceProvider() *paginator.SliceQueryProvider[int] {
+func NewSliceProvider() *queryerslice.QueryerSlice[int] {
 	data := make([]int, 0, dataLen)
 
 	for i := range dataLen {
 		data = append(data, i+1)
 	}
 
-	return paginator.NewSliceQueryProvider(data)
+	return queryerslice.New(data)
 }
