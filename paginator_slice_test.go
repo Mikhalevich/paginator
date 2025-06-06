@@ -2,6 +2,7 @@ package paginator_test
 
 import (
 	"errors"
+	"math/rand/v2"
 	"testing"
 	"time"
 
@@ -20,7 +21,6 @@ const (
 	pageSize         = 10
 )
 
-//nolint:unparam
 func initSlicePaginator(dataLen, pageSize int, opts ...queryerslice.Option) *paginator.Paginator[int] {
 	data := make([]int, 0, dataLen)
 	for i := range dataLen {
@@ -379,4 +379,40 @@ func TestQueryCache(t *testing.T) {
 
 	testFlow()
 	testFlow()
+}
+
+func BenchmarkInplaceSlice(b *testing.B) {
+	pag := initSlicePaginator(10001, 50)
+
+	page, err := pag.Page(b.Context(), 1)
+	if err != nil {
+		b.Fatal("request first page", err)
+	}
+
+	pagesCount := page.PageTotalCount
+
+	for b.Loop() {
+		//nolint:gosec
+		if _, err := pag.Page(b.Context(), rand.Int()%pagesCount+1); err != nil {
+			b.Fatal("request page", err)
+		}
+	}
+}
+
+func BenchmarkCopySlice(b *testing.B) {
+	pag := initSlicePaginator(10001, 50, queryerslice.WithCopy())
+
+	page, err := pag.Page(b.Context(), 1)
+	if err != nil {
+		b.Fatal("request first page", err)
+	}
+
+	pagesCount := page.PageTotalCount
+
+	for b.Loop() {
+		//nolint:gosec
+		if _, err := pag.Page(b.Context(), rand.Int()%pagesCount+1); err != nil {
+			b.Fatal("request page", err)
+		}
+	}
 }
