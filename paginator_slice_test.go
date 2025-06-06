@@ -10,6 +10,7 @@ import (
 
 	"github.com/Mikhalevich/paginator"
 	"github.com/Mikhalevich/paginator/queryercache"
+	"github.com/Mikhalevich/paginator/queryerslice"
 )
 
 const (
@@ -20,13 +21,13 @@ const (
 )
 
 //nolint:unparam
-func initSlicePaginator(dataLen, pageSize int) *paginator.Paginator[int] {
+func initSlicePaginator(dataLen, pageSize int, opts ...queryerslice.Option) *paginator.Paginator[int] {
 	data := make([]int, 0, dataLen)
 	for i := range dataLen {
 		data = append(data, i+1)
 	}
 
-	return paginator.New(paginator.NewSliceQueryProvider(data), pageSize)
+	return paginator.New(queryerslice.New(data, opts...), pageSize)
 }
 
 func initMockPaginator(
