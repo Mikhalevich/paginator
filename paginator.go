@@ -37,9 +37,9 @@ func (p *Paginator[T]) Page(ctx context.Context, page int) (*Page[T], error) {
 	}
 
 	var (
-		offset         = p.pageSize * (page - 1)
-		limit          = p.pageSize
-		pageTotalCount = p.calculatePageCount(count)
+		offset                       = p.pageSize * (page - 1)
+		limit                        = p.pageSize
+		pageTotalCount, lastPageSize = p.calculatePageCountAndLastPageSize(count)
 	)
 
 	if page > pageTotalCount {
@@ -47,7 +47,7 @@ func (p *Paginator[T]) Page(ctx context.Context, page int) (*Page[T], error) {
 	}
 
 	if page == pageTotalCount {
-		limit = count % p.pageSize
+		limit = lastPageSize
 	}
 
 	data, err := p.queryer.Query(ctx, offset, limit)
@@ -70,15 +70,15 @@ func (p *Paginator[T]) Page(ctx context.Context, page int) (*Page[T], error) {
 	}, nil
 }
 
-func (p *Paginator[T]) calculatePageCount(count int) int {
+func (p *Paginator[T]) calculatePageCountAndLastPageSize(count int) (int, int) {
 	var (
 		fullPageCount = count / p.pageSize
-		partPage      = count % p.pageSize
+		lastPageSize  = count % p.pageSize
 	)
 
-	if partPage > 0 {
-		return fullPageCount + 1
+	if lastPageSize > 0 {
+		return fullPageCount + 1, lastPageSize
 	}
 
-	return fullPageCount
+	return fullPageCount, p.pageSize
 }

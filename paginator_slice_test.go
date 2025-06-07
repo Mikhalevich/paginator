@@ -17,7 +17,6 @@ import (
 const (
 	sqlTestRows      = 101
 	sqlBenchmartRows = 10001
-	dataLen          = 101
 	pageSize         = 10
 )
 
@@ -112,6 +111,35 @@ func TestLastPage(t *testing.T) {
 	t.Run("copy", func(t *testing.T) {
 		t.Parallel()
 		testCase(t, initSlicePaginator(101, 10, queryerslice.WithCopy()))
+	})
+}
+
+func TestFullLastPage(t *testing.T) {
+	t.Parallel()
+
+	testCase := func(t *testing.T, pg *paginator.Paginator[int]) {
+		t.Helper()
+
+		page, err := pg.Page(t.Context(), 10)
+
+		require.NoError(t, err)
+
+		require.ElementsMatch(t, []int{91, 92, 93, 94, 95, 96, 97, 98, 99, 100}, page.Data)
+		require.Equal(t, 91, page.BottomIndex)
+		require.Equal(t, 100, page.TopIndex)
+		require.Equal(t, 10, page.PageSize)
+		require.Equal(t, 10, page.PageNumber)
+		require.Equal(t, 10, page.PageTotalCount)
+	}
+
+	t.Run("inplace", func(t *testing.T) {
+		t.Parallel()
+		testCase(t, initSlicePaginator(100, 10))
+	})
+
+	t.Run("copy", func(t *testing.T) {
+		t.Parallel()
+		testCase(t, initSlicePaginator(100, 10, queryerslice.WithCopy()))
 	})
 }
 
