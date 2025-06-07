@@ -99,7 +99,7 @@ func TestLastPage(t *testing.T) {
 		require.ElementsMatch(t, []int{101}, page.Data)
 		require.Equal(t, 101, page.BottomIndex)
 		require.Equal(t, 101, page.TopIndex)
-		require.Equal(t, 10, page.PageSize)
+		require.Equal(t, 1, page.PageSize)
 		require.Equal(t, 11, page.PageNumber)
 		require.Equal(t, 11, page.PageTotalCount)
 	}
@@ -291,7 +291,7 @@ func TestQueryCountCache(t *testing.T) {
 
 	gomock.InOrder(
 		mockQueryer.EXPECT().Count(ctx).Return(3, nil),
-		mockQueryer.EXPECT().Query(ctx, 0, pageSize).Return([]int{1, 2, 3}, nil),
+		mockQueryer.EXPECT().Query(ctx, 0, 3).Return([]int{1, 2, 3}, nil),
 	)
 
 	testFlow := func() {
@@ -302,7 +302,7 @@ func TestQueryCountCache(t *testing.T) {
 		require.ElementsMatch(t, []int{1, 2, 3}, page.Data)
 		require.Equal(t, 1, page.BottomIndex)
 		require.Equal(t, 3, page.TopIndex)
-		require.Equal(t, 10, page.PageSize)
+		require.Equal(t, 3, page.PageSize)
 		require.Equal(t, 1, page.PageNumber)
 		require.Equal(t, 1, page.PageTotalCount)
 	}
@@ -325,8 +325,8 @@ func TestCountCache(t *testing.T) {
 
 	gomock.InOrder(
 		mockQueryer.EXPECT().Count(ctx).Return(3, nil),
-		mockQueryer.EXPECT().Query(ctx, 0, pageSize).Return([]int{1, 2, 3}, nil),
-		mockQueryer.EXPECT().Query(ctx, 0, pageSize).Return([]int{1, 2, 3}, nil),
+		mockQueryer.EXPECT().Query(ctx, 0, 3).Return([]int{1, 2, 3}, nil),
+		mockQueryer.EXPECT().Query(ctx, 0, 3).Return([]int{1, 2, 3}, nil),
 	)
 
 	testFlow := func() {
@@ -337,7 +337,7 @@ func TestCountCache(t *testing.T) {
 		require.ElementsMatch(t, []int{1, 2, 3}, page.Data)
 		require.Equal(t, 1, page.BottomIndex)
 		require.Equal(t, 3, page.TopIndex)
-		require.Equal(t, 10, page.PageSize)
+		require.Equal(t, 3, page.PageSize)
 		require.Equal(t, 1, page.PageNumber)
 		require.Equal(t, 1, page.PageTotalCount)
 	}
@@ -360,7 +360,7 @@ func TestQueryCache(t *testing.T) {
 
 	gomock.InOrder(
 		mockQueryer.EXPECT().Count(ctx).Return(3, nil),
-		mockQueryer.EXPECT().Query(ctx, 0, pageSize).Return([]int{1, 2, 3}, nil),
+		mockQueryer.EXPECT().Query(ctx, 0, 3).Return([]int{1, 2, 3}, nil),
 		mockQueryer.EXPECT().Count(ctx).Return(3, nil),
 	)
 
@@ -372,7 +372,7 @@ func TestQueryCache(t *testing.T) {
 		require.ElementsMatch(t, []int{1, 2, 3}, page.Data)
 		require.Equal(t, 1, page.BottomIndex)
 		require.Equal(t, 3, page.TopIndex)
-		require.Equal(t, 10, page.PageSize)
+		require.Equal(t, 3, page.PageSize)
 		require.Equal(t, 1, page.PageNumber)
 		require.Equal(t, 1, page.PageTotalCount)
 	}

@@ -26,10 +26,6 @@ func New[T any](data []T, opts ...Option) *QueryerSlice[T] {
 func (s *QueryerSlice[T]) Query(ctx context.Context, offset int, limit int) ([]T, error) {
 	endIndex := offset + limit
 
-	if endIndex > len(s.Data) {
-		endIndex = len(s.Data)
-	}
-
 	if s.opts.CopySlice {
 		sliceCopy := make([]T, endIndex-offset)
 
