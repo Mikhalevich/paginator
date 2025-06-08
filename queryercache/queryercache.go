@@ -7,12 +7,18 @@ import (
 	"time"
 
 	"github.com/Mikhalevich/paginator"
+	"github.com/Mikhalevich/paginator/queryercache/metrics"
 )
 
 const (
 	defaultCountCacheTTL = time.Second * 30
 	defaultQueryCacheTTL = time.Second * 30
 )
+
+type CacheMetrics interface {
+	CountIncrement(cached bool)
+	QueryIncrement(cached bool)
+}
 
 type QueryerCache[T any] struct {
 	queryer paginator.Queryer[T]
@@ -22,12 +28,15 @@ type QueryerCache[T any] struct {
 
 	query    keyValue[[]T]
 	queryMtx sync.RWMutex
+
+	metrics CacheMetrics
 }
 
 func New[T any](queryer paginator.Queryer[T], opts ...Option) *QueryerCache[T] {
 	defaultOptions := options{
 		CountTTL: defaultCountCacheTTL,
 		QueryTTL: defaultQueryCacheTTL,
+		Metrics:  metrics.NewNoop(),
 	}
 
 	for _, o := range opts {
@@ -43,6 +52,7 @@ func New[T any](queryer paginator.Queryer[T], opts ...Option) *QueryerCache[T] {
 		queryer: queryer,
 		count:   count,
 		query:   query,
+		metrics: defaultOptions.Metrics,
 	}
 }
 
@@ -56,10 +66,21 @@ func (q *QueryerCache[T]) countValue(withLock bool) (int, bool) {
 }
 
 func (q *QueryerCache[T]) Count(ctx context.Context) (int, error) {
+	val, cached, err := q.countValueAndUpdateCache(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("count value and update cache: %w", err)
+	}
+
+	q.metrics.CountIncrement(cached)
+
+	return val, nil
+}
+
+func (q *QueryerCache[T]) countValueAndUpdateCache(ctx context.Context) (int, bool, error) {
 	//nolint:varnamelen
 	val, ok := q.countValue(true)
 	if ok {
-		return val, nil
+		return val, true, nil
 	}
 
 	q.countMtx.Lock()
@@ -67,35 +88,50 @@ func (q *QueryerCache[T]) Count(ctx context.Context) (int, error) {
 
 	val, ok = q.countValue(false)
 	if ok {
-		return val, nil
+		return val, true, nil
 	}
 
 	count, err := q.queryer.Count(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("count: %w", err)
+		return 0, false, fmt.Errorf("count: %w", err)
 	}
 
 	q.count.SetValue(count)
 
-	return count, nil
+	return count, false, nil
 }
 
 func (q *QueryerCache[T]) Query(ctx context.Context, offset int, limit int) ([]T, error) {
+	val, cached, err := q.queryValueAndUpdateCache(ctx, offset, limit)
+	if err != nil {
+		return nil, fmt.Errorf("query value and update cache: %w", err)
+	}
+
+	q.metrics.QueryIncrement(cached)
+
+	return val, nil
+}
+
+func (q *QueryerCache[T]) queryValueAndUpdateCache(
+	ctx context.Context,
+	offset int,
+	limit int,
+) ([]T, bool, error) {
 	key := makeQueryKey(offset, limit)
 
 	vals, ok := q.queryValue(key)
 	if ok {
-		return vals, nil
+		return vals, true, nil
 	}
 
 	vals, err := q.queryer.Query(ctx, offset, limit)
 	if err != nil {
-		return nil, fmt.Errorf("query: %w", err)
+		return nil, false, fmt.Errorf("query: %w", err)
 	}
 
 	q.setQueryValue(key, vals)
 
-	return vals, nil
+	return vals, false, nil
 }
 
 func (q *QueryerCache[T]) queryValue(key string) ([]T, bool) {

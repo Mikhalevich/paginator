@@ -7,6 +7,7 @@ import (
 type options struct {
 	CountTTL time.Duration
 	QueryTTL time.Duration
+	Metrics  CacheMetrics
 }
 
 type Option func(opt *options)
