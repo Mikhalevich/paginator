@@ -23,3 +23,9 @@ func WithQueryTTL(ttl time.Duration) Option {
 		opt.QueryTTL = ttl
 	}
 }
+
+func WithMetrics(m CacheMetrics) Option {
+	return func(opt *options) {
+		opt.Metrics = m
+	}
+}
