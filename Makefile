@@ -11,7 +11,7 @@ LINTER_VERSION := v2.1.2
 all: build
 
 build:
-	go build -o $(BIN_PATH)/httpcachedslice ./examples/httpcachedslice/main.go
+	go build -o $(BIN_PATH)/httpcachedpostgres ./examples/httpcachedpostgres/
 
 test:
 	go test ./...
