@@ -1,3 +1,4 @@
+// Package metrics provides metric support for QueryerCache.
 package metrics
 
 import (
@@ -5,6 +6,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
+// Prometheus struct for prometheus metrics implementation.
+// specify four metrics:
+// paginator_cache_count_total - total number of count calls.
+// paginator_cache_count_hit_total - count cache hit number.
+// paginator_cache_query_total - total number of query calls.
+// paginator_cache_query_hit_total - query cache hit number.
 type Prometheus struct {
 	countCounterTotal prometheus.Counter
 	countCounterHit   prometheus.Counter
@@ -13,6 +20,7 @@ type Prometheus struct {
 	queryCounterHit  prometheus.Counter
 }
 
+// NewPrometheus constructs new Prometheus.
 func NewPrometheus() *Prometheus {
 	var (
 		countTotal = promauto.NewCounter(prometheus.CounterOpts{
@@ -44,6 +52,7 @@ func NewPrometheus() *Prometheus {
 	}
 }
 
+// CountIncrement increment total and cache hit count calls.
 func (p *Prometheus) CountIncrement(cached bool) {
 	p.countCounterTotal.Inc()
 
@@ -52,6 +61,7 @@ func (p *Prometheus) CountIncrement(cached bool) {
 	}
 }
 
+// QueryIncrement increment total and cache hit query calls.
 func (p *Prometheus) QueryIncrement(cached bool) {
 	p.queryCouterTotal.Inc()
 

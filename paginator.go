@@ -1,3 +1,4 @@
+// Package paginator implements simple pagination mechanics.
 package paginator
 
 import (
@@ -5,16 +6,19 @@ import (
 	"fmt"
 )
 
+// Queryer interface for external implementation for paginator usage.
 type Queryer[T any] interface {
 	Query(ctx context.Context, offset int, limit int) ([]T, error)
 	Count(ctx context.Context) (int, error)
 }
 
+// Paginator structure.
 type Paginator[T any] struct {
 	queryer  Queryer[T]
 	pageSize int
 }
 
+// New construct paginator.
 func New[T any](queryer Queryer[T], pageSize int) *Paginator[T] {
 	return &Paginator[T]{
 		queryer:  queryer,
@@ -22,6 +26,7 @@ func New[T any](queryer Queryer[T], pageSize int) *Paginator[T] {
 	}
 }
 
+// Page returns information about page by it's number.
 func (p *Paginator[T]) Page(ctx context.Context, page int) (*Page[T], error) {
 	if page <= 0 {
 		return nil, fmt.Errorf("invaid page number: %d", page)
@@ -70,6 +75,7 @@ func (p *Paginator[T]) Page(ctx context.Context, page int) (*Page[T], error) {
 	}, nil
 }
 
+// calculatePageCountAndLastPageSize returns page count and last page size.
 func (p *Paginator[T]) calculatePageCountAndLastPageSize(count int) (int, int) {
 	var (
 		fullPageCount = count / p.pageSize

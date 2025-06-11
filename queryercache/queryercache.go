@@ -1,3 +1,4 @@
+// Package queryercache provides cache for paginator Queryer interface.
 package queryercache
 
 import (
@@ -15,11 +16,13 @@ const (
 	defaultQueryCacheTTL = time.Second * 30
 )
 
+// CacheMetrics specify interface for metrics methods.
 type CacheMetrics interface {
 	CountIncrement(cached bool)
 	QueryIncrement(cached bool)
 }
 
+// QueryerCache implementing cache for paginator.Queryer interface.
 type QueryerCache[T any] struct {
 	queryer paginator.Queryer[T]
 
@@ -32,6 +35,7 @@ type QueryerCache[T any] struct {
 	metrics CacheMetrics
 }
 
+// New conscturcts new QueryerCache.
 func New[T any](queryer paginator.Queryer[T], opts ...Option) *QueryerCache[T] {
 	defaultOptions := options{
 		CountTTL: defaultCountCacheTTL,
@@ -65,6 +69,8 @@ func (q *QueryerCache[T]) countValue(withLock bool) (int, bool) {
 	return q.count.Value()
 }
 
+// Count returns count value from cache if available and not expired.
+// otherwise returns value from queryer.Count and update cache value.
 func (q *QueryerCache[T]) Count(ctx context.Context) (int, error) {
 	val, cached, err := q.countValueAndUpdateCache(ctx)
 	if err != nil {
@@ -76,6 +82,8 @@ func (q *QueryerCache[T]) Count(ctx context.Context) (int, error) {
 	return val, nil
 }
 
+// countValueAndUpdateCache returns count value and flag specified is it from cache or not.
+// call queryer.Count and update cache value if cache is expired.
 func (q *QueryerCache[T]) countValueAndUpdateCache(ctx context.Context) (int, bool, error) {
 	//nolint:varnamelen
 	val, ok := q.countValue(true)
@@ -101,6 +109,8 @@ func (q *QueryerCache[T]) countValueAndUpdateCache(ctx context.Context) (int, bo
 	return count, false, nil
 }
 
+// Query returns cached data value if available and not expired.
+// otherwise returns value from queryer.Query and update cache value.
 func (q *QueryerCache[T]) Query(ctx context.Context, offset int, limit int) ([]T, error) {
 	val, cached, err := q.queryValueAndUpdateCache(ctx, offset, limit)
 	if err != nil {
@@ -112,6 +122,8 @@ func (q *QueryerCache[T]) Query(ctx context.Context, offset int, limit int) ([]T
 	return val, nil
 }
 
+// queryValueAndUpdateCache returns query value and flag specified is it from cache or not.
+// call queryer.Query and update cache value if cache is expired.
 func (q *QueryerCache[T]) queryValueAndUpdateCache(
 	ctx context.Context,
 	offset int,
@@ -134,6 +146,7 @@ func (q *QueryerCache[T]) queryValueAndUpdateCache(
 	return vals, false, nil
 }
 
+// queryValue returns query cache value and expiration flag.
 func (q *QueryerCache[T]) queryValue(key string) ([]T, bool) {
 	q.queryMtx.RLock()
 	defer q.queryMtx.RUnlock()
