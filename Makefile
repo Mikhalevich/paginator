@@ -12,6 +12,7 @@ all: build
 
 build:
 	go build -o $(BIN_PATH)/httpcachedpostgres ./examples/httpcachedpostgres/
+	go build -o $(BIN_PATH)/slicepaginagor ./examples/slicepaginator/
 
 test:
 	go test ./...
