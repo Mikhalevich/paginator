@@ -1,4 +1,4 @@
-// Package paginator implements simple pagination mechanics
+// Package paginator implements simple pagination mechanics.
 package paginator
 
 import (

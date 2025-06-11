@@ -1,3 +1,4 @@
+// Package metrics provides metric support for QueryerCache.
 package metrics
 
 import (

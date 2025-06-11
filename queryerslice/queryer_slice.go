@@ -1,3 +1,4 @@
+// Package queryerslice provides slice implementation for paginator Queryer interface.
 package queryerslice
 
 import (

@@ -1,3 +1,4 @@
+// Package queryercache provides cache for paginator Queryer interface.
 package queryercache
 
 import (
