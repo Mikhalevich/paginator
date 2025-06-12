@@ -10,6 +10,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/Mikhalevich/paginator"
+	"github.com/Mikhalevich/paginator/mock"
 	"github.com/Mikhalevich/paginator/queryercache"
 	"github.com/Mikhalevich/paginator/queryerslice"
 )
@@ -31,12 +32,12 @@ func initSlicePaginator(dataLen, pageSize int, opts ...queryerslice.Option) *pag
 
 func initMockPaginator(
 	t *testing.T,
-) (*paginator.Paginator[int], *paginator.MockQueryer[int]) {
+) (*paginator.Paginator[int], *mock.MockQueryer[int]) {
 	t.Helper()
 
 	var (
 		ctrl        = gomock.NewController(t)
-		mockQueryer = paginator.NewMockQueryer[int](ctrl)
+		mockQueryer = mock.NewMockQueryer[int](ctrl)
 	)
 
 	return paginator.New(mockQueryer, pageSize), mockQueryer
@@ -45,12 +46,12 @@ func initMockPaginator(
 func initMockCachedPaginator(
 	t *testing.T,
 	cacheOpts ...queryercache.Option,
-) (*paginator.Paginator[int], *paginator.MockQueryer[int]) {
+) (*paginator.Paginator[int], *mock.MockQueryer[int]) {
 	t.Helper()
 
 	var (
 		ctrl        = gomock.NewController(t)
-		mockQueryer = paginator.NewMockQueryer[int](ctrl)
+		mockQueryer = mock.NewMockQueryer[int](ctrl)
 	)
 
 	return paginator.New(queryercache.New(mockQueryer, cacheOpts...), pageSize), mockQueryer
