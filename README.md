@@ -1,6 +1,9 @@
 # paginator
 Simple implementation pagination mechanics for Golang
 
+###### Documentation 
+[![Go Reference](https://pkg.go.dev/badge/github.com/Mikhalevich/paginator.svg)](https://pkg.go.dev/github.com/Mikhalevich/paginator)
+
 ### example for slice data source
 ```golang
 package main
